@@ -1,0 +1,7 @@
+py_vers: 2.7.13
+homedir: /home/vagrant
+workdir: '{{ homedir }}/snoek'
+destdir: /opt/
+srcdir: '{{ homedir }}/src'
+python: '{{ destdir }}/python-{{ py_vers }}/bin/python'
+pip: '{{ destdir }}/python-{{ py_vers }}/bin/pip'

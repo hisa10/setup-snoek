@@ -1,0 +1,44 @@
+---
+- name: Check installation of Python {{ py_vers }}
+  stat:
+    path: '{{ destdir }}/python-{{ py_vers }}'
+  register: py
+  ignore_errors: yes
+- name: Download Python {{ py_vers }} src
+  get_url:
+    url: 'https://www.python.org/ftp/python/{{ py_vers }}/Python-{{ py_vers }}.tgz'
+    dest: /tmp/
+  when: not py.stat.exists
+- name: Create source directory
+  file:
+    path: '{{ srcdir }}'
+    state: directory
+- name: Unarchive Python {{ py_vers }} src
+  unarchive:
+    src: '/tmp/Python-{{ py_vers }}.tgz'
+    dest: '{{ srcdir }}'
+    remote_src: yes
+  when: not py.stat.exists
+- name: Configure Python {{ py_vers }}
+  shell: ./configure --prefix={{ destdir }}/python-{{ py_vers }} --enable-optimizations
+  args:
+    chdir: '{{ srcdir }}/Python-{{ py_vers }}'
+  when: not py.stat.exists
+- name: Make Python {{ py_vers }}
+  shell: make -j2
+  args:
+    chdir: '{{ srcdir }}/Python-{{ py_vers }}'
+  when: not py.stat.exists
+- name: Install Python {{ py_vers }}
+  shell: make install
+  args:
+    chdir: '{{ srcdir }}/Python-{{ py_vers }}'
+  when: not py.stat.exists
+- name: Cleanup tar ball
+  file:
+    path: '/tmp/Python-{{ py_vers }}.tgz'
+    state: absent
+#- name: Cleanup source tree
+#  file:
+#    path: '{{ srcdir }}/Python-{{ py_vers }}'
+#    state: absent

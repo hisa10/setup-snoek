@@ -1,0 +1,76 @@
+---
+- hosts: servers
+  user: vagrant
+  become: False
+  environment:
+    PATH: '/home/{{ ansible_user }}/.local/bin:/opt/python-{{ py_vers }}/bin:{{ ansible_env.PATH }}'
+  tasks:
+#    - name: Setup required packages
+#      zypper:
+#        name: '{{ item }}'
+#        state: present
+#      become: True
+#      with_items:
+#        - libopenssl-devel
+#        - readline-devel
+#        - sqlite-devel
+#    - name: Setup Python
+#      include: setup-python.yml
+#      become: True
+    - name: Check pip installation
+      stat:
+        path: ~/.local/bin/pip
+        #path: '/opt/python-{{ py_vers }}/bin/pip'
+      register: getpip
+      ignore_errors: True
+    - name: Get pip installer
+      get_url:
+        url: https://bootstrap.pypa.io/get-pip.py
+        dest: /tmp/get-pip.py
+      when: not getpip.stat.exists
+    - name: Setup pip
+      shell: '{{ python }} /tmp/get-pip.py --user'
+      when: not getpip.stat.exists
+    - name: Delete pip installer
+      file:
+        path: /tmp/get-pip.py
+        state: absent
+      when: not getpip.stat.exists
+    - name: Setup virtualenv
+      pip:
+        name: '{{ item }}'
+        state: latest
+        extra_args: --user
+      with_items:
+        - pysqlite
+        - virtualenv
+        - django-extensions
+      environment:
+        PATH: '/home/{{ ansible_user }}/.local/bin:/opt/python-{{ py_vers }}/bin:{{ ansible_env.PATH }}'
+    - name: Clone snoek source
+      git:
+        repo: https://github.com/hisa10/snoek
+        dest: '{{ workdir }}'
+        clone: True
+    - name: Setup required packages
+      pip:
+        requirements: '{{ workdir }}/requirements.txt'
+        state: latest
+        extra_args: --user
+      environment:
+        PATH: '/home/{{ ansible_user }}/.local/bin:/opt/python-{{ py_vers }}/bin:{{ ansible_env.PATH }}'
+    - name: Copy settings file
+      copy:
+        src: ./snoek/settings.py.sample
+        dest: ./snoek/settings.py
+        remote_src: True
+    - name: Set timezone
+      lineinfile:
+        path: ./snoek/settings.py
+        regexp: "TIME_ZONE = 'Asia/Shanghai'"
+        line: "TIME_ZONE = 'Asia/Tokyo'"
+#    - name: Copy sample db
+#      copy:
+#        src: ./snoek/db.sqlite.sample
+#        dest: ./snoek/db.sqlite
+#        remote_src: True
